@@ -18,17 +18,21 @@ Add-Type -AssemblyName System.Drawing
 . "$rootDir\core\grid_logic.ps1"
 . "$rootDir\core\widget_base.ps1"
 
-# Theme
+# Theme - Transparent Setup
+# We use a specific "Chroma Key" color for transparency to make the background invisible.
+$chromaKey = [System.Drawing.Color]::Magenta 
 $theme = @{
-    Background = [System.Drawing.Color]::FromArgb(30, 30, 35)
+    Background = $chromaKey
     Foreground = [System.Drawing.Color]::White
     Accent     = [System.Drawing.Color]::FromArgb(100, 200, 255)
     Indicator  = [System.Drawing.Color]::FromArgb(80, 255, 255, 255)
 }
 
-# Create Standard Widget Form
-# Width 240, Height 110 (Increased slightly for header)
-$form = New-StandardWidget -Name "Clock" -Width 240 -Height 110 -ConfigPath $configPath -Theme $theme
+# Create Standard Widget Form with No Header
+$form = New-StandardWidget -Name "Clock" -Width 240 -Height 100 -ConfigPath $configPath -Theme $theme -NoHeader $true
+
+# Apply Transparency
+$form.TransparencyKey = $chromaKey
 
 # Override Manual Position if passed
 if ($X -ne -1 -and $Y -ne -1) {
@@ -37,10 +41,10 @@ if ($X -ne -1 -and $Y -ne -1) {
 }
 
 # --- Widget Specific UI ---
-# Standard Factory handles Background, Rounded Corners, Border, Header.
 
 $panel = $form.Tag.ContentPanel
-# Content Panel already has padding (10,5,10,10)
+# Remove padding to allow text to hit edges
+$panel.Padding = New-Object System.Windows.Forms.Padding(0)
 
 # Time Label
 $timeLabel = New-Object System.Windows.Forms.Label
@@ -48,12 +52,11 @@ $timeLabel.Text = Get-Date -Format "HH:mm:ss"
 $timeLabel.ForeColor = $theme.Foreground
 $timeLabel.BackColor = "Transparent"
 $timeLabel.AutoSize = $false
-$timeLabel.Width = 220
-$timeLabel.Height = 45
-$timeLabel.Left = 0
-$timeLabel.Top = 5
 $timeLabel.TextAlign = "MiddleCenter"
-$timeLabel.Font = New-Object System.Drawing.Font("Segoe UI", 28, [System.Drawing.FontStyle]::Bold)
+$timeLabel.Dock = "Top"
+$timeLabel.Height = 70 # Initial split
+# Use a Font that scales well
+$timeLabel.Font = New-Object System.Drawing.Font("Segoe UI", 36, [System.Drawing.FontStyle]::Bold)
 $panel.Controls.Add($timeLabel)
 
 # Date Label
@@ -62,13 +65,36 @@ $dateLabel.Text = Get-Date -Format "dddd, MMMM dd, yyyy"
 $dateLabel.ForeColor = $theme.Accent
 $dateLabel.BackColor = "Transparent"
 $dateLabel.AutoSize = $false
-$dateLabel.Width = 220
-$dateLabel.Height = 25
-$dateLabel.Left = 0
-$dateLabel.Top = 50
-$dateLabel.TextAlign = "MiddleCenter"
-$dateLabel.Font = New-Object System.Drawing.Font("Segoe UI", 10, [System.Drawing.FontStyle]::Regular)
+$dateLabel.TextAlign = "TopCenter"
+$dateLabel.Dock = "Fill" 
+$dateLabel.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Regular)
 $panel.Controls.Add($dateLabel)
+
+# Dynamic Resizing Logic
+$resizeLogic = {
+    $h = $panel.Height
+    
+    # Check if too small
+    if ($h -lt 50) { return }
+
+    # Ratios
+    $timeH = [Math]::Floor($h * 0.70)
+    $dateH = $h - $timeH
+    
+    $timeLabel.Height = $timeH
+    
+    # Scale Fonts
+    # Time font ~ 50% of its container height
+    $timeFontSize = [Math]::Max(8, $timeH * 0.6)
+    $dateFontSize = [Math]::Max(6, $dateH * 0.4)
+    
+    $timeLabel.Font = New-Object System.Drawing.Font("Segoe UI", $timeFontSize, [System.Drawing.FontStyle]::Bold)
+    $dateLabel.Font = New-Object System.Drawing.Font("Segoe UI", $dateFontSize, [System.Drawing.FontStyle]::Regular)
+}
+
+$form.Add_Resize({ & $resizeLogic })
+# Initial Call
+& $resizeLogic
 
 # Update Timer
 $timer = New-Object System.Windows.Forms.Timer
@@ -79,9 +105,11 @@ $timer.Add_Tick({
     })
 $timer.Start()
 
-# Enable Drag for specific labels
-$indicator = $form.Tag.Header
-Enable-WidgetDrag -Controls @($timeLabel, $dateLabel) -Form $form -IndicatorPanel $indicator
+# Enable Drag for Labels (since no header)
+# We use the Form as the "Indicator" argument so drag triggers correctly
+Enable-WidgetDrag -Controls @($timeLabel, $dateLabel, $panel, $form) -Form $form
+Enable-WidgetResize -Form $form -IndicatorPanel $null # Resize without indicator color change
+
 $timeLabel.ContextMenuStrip = $form.ContextMenuStrip
 $dateLabel.ContextMenuStrip = $form.ContextMenuStrip
 

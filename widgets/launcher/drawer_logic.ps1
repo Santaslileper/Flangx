@@ -134,7 +134,8 @@ function Show-WidgetDrawer {
                         }
                         if ($lbl -and $ctl.Tag) { $lbl.Text = $ctl.Tag.Name }
                     }
-                } catch {}
+                }
+                catch {}
             }.GetNewClosure()
             
             $hoverLeave = { 
@@ -149,7 +150,8 @@ function Show-WidgetDrawer {
                         }
                         if ($lbl) { $lbl.Text = "Select a Widget" }
                     }
-                } catch {}
+                }
+                catch {}
             }.GetNewClosure()
             
             $dragLogic = {
@@ -184,17 +186,17 @@ function Show-WidgetDrawer {
                             
                             # Rounded Corners for Ghost
                             $ghost.Add_Load({
-                                $path = New-Object System.Drawing.Drawing2D.GraphicsPath
-                                $rect = $ghost.ClientRectangle
-                                $radius = 20
-                                $d = $radius * 2
-                                $path.AddArc($rect.X, $rect.Y, $d, $d, 180, 90)
-                                $path.AddArc($rect.Right - $d, $rect.Y, $d, $d, 270, 90)
-                                $path.AddArc($rect.Right - $d, $rect.Bottom - $d, $d, $d, 0, 90)
-                                $path.AddArc($rect.X, $rect.Bottom - $d, $d, $d, 90, 90)
-                                $path.CloseFigure()
-                                $ghost.Region = New-Object System.Drawing.Region($path)
-                            })
+                                    $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+                                    $rect = $ghost.ClientRectangle
+                                    $radius = 20
+                                    $d = $radius * 2
+                                    $path.AddArc($rect.X, $rect.Y, $d, $d, 180, 90)
+                                    $path.AddArc($rect.Right - $d, $rect.Y, $d, $d, 270, 90)
+                                    $path.AddArc($rect.Right - $d, $rect.Bottom - $d, $d, $d, 0, 90)
+                                    $path.AddArc($rect.X, $rect.Bottom - $d, $d, $d, 90, 90)
+                                    $path.CloseFigure()
+                                    $ghost.Region = New-Object System.Drawing.Region($path)
+                                })
                             
                             $gLabel = New-Object System.Windows.Forms.Label
                             $gLabel.Text = $wInfo.Icon; $gLabel.Dock = "Fill"; $gLabel.TextAlign = "MiddleCenter"
@@ -233,8 +235,8 @@ function Show-WidgetDrawer {
                         $wPath = Join-Path $wd $wInfo.Script
                         
                         if (Test-Path $wPath) {
-                             $sanitizedName = $wInfo.Name -replace '\s+', ''
-                             $instanceId = if ($wInfo.AllowMultiple) { (Get-Date -Format "yyyyMMddHHmmssfff") + "_" + (Get-Random -Maximum 9999) } else { $null }
+                            $sanitizedName = $wInfo.Name -replace '\s+', ''
+                            $instanceId = if ($wInfo.AllowMultiple) { (Get-Date -Format "yyyyMMddHHmmssfff") + "_" + (Get-Random -Maximum 9999) } else { $null }
                             
                             if (-not $wInfo.AllowMultiple) {
                                 $widgetDir = Split-Path -Parent $wPath
@@ -247,7 +249,7 @@ function Show-WidgetDrawer {
                                 }
                             }
                             
-                            $argsList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$wPath`"", "-X", "$finalX", "-Y", "$finalY", "-WindowStyle", "Hidden", "-PassThru")
+                            $argsList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", "`"$wPath`"", "-X", "$finalX", "-Y", "$finalY", "-PassThru")
                             if ($instanceId) { $argsList += ("-InstanceId", "$instanceId") }
 
                             $proc = Start-Process powershell.exe -ArgumentList $argsList
@@ -267,7 +269,7 @@ function Show-WidgetDrawer {
                         if (Test-Path $wPath) {
                             $instanceId = if ($wInfo.AllowMultiple) { (Get-Date -Format "yyyyMMddHHmmssfff") + "_" + (Get-Random -Maximum 9999) } else { $null }
                             
-                            $argsList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", "`"$wPath`"", "-X", "-1", "-Y", "-1", "-WindowStyle", "Hidden", "-PassThru")
+                            $argsList = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", "`"$wPath`"", "-X", "-1", "-Y", "-1", "-PassThru")
                             if ($instanceId) { $argsList += ("-InstanceId", "$instanceId") }
                             
                             $proc = Start-Process powershell.exe -ArgumentList $argsList

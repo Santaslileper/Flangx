@@ -206,7 +206,7 @@
             catch {}
 
             if ($shouldRun) {
-                $proc = Start-Process powershell.exe -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$scriptPath`"", "-X", "-1", "-Y", "-1", "-WindowStyle", "Hidden", "-PassThru"
+                $proc = Start-Process powershell.exe -ArgumentList "-NoProfile", "-ExecutionPolicy", "Bypass", "-WindowStyle", "Hidden", "-File", "`"$scriptPath`"", "-X", "-1", "-Y", "-1", "-PassThru"
                 $script:ManagedWidgets["$($dir.Name)_Default"] = @{ Process = $proc; Type = $dir.Name }
                 continue 
             }

@@ -83,7 +83,9 @@ function global:New-StandardWidget {
     # --- Standard Visuals (Rounded Corners & Border) ---
     
     # Logic to update the window shape (Region)
+    # We use GetNewClosure() to capture '$form' into this scriptblock context reliably.
     $updateRegion = {
+        param($sender, $e) # standard event signature
         if ($form.WindowState -eq 'Minimized') { return }
         
         $radius = 20
@@ -102,36 +104,37 @@ function global:New-StandardWidget {
     
         $form.Region = New-Object System.Drawing.Region($path)
         $form.Invalidate() # Trigger Repaint for border
-    }
+    }.GetNewClosure()
 
     # Apply on Load and Resize
-    $form.Add_Load({ & $updateRegion })
-    $form.Add_Resize({ & $updateRegion })
+    # We pass the closure directly.
+    $form.Add_Load($updateRegion)
+    $form.Add_Resize($updateRegion)
 
     $form.Add_Paint({
-            param($s, $e)
-            $g = $e.Graphics
-            $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+        param($s, $e)
+        $g = $e.Graphics
+        $g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
     
-            $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(50, 255, 255, 255), 2)
-            $rect = $form.ClientRectangle
-            $rect.Inflate(-1, -1)
+        $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(50, 255, 255, 255), 2)
+        $rect = $form.ClientRectangle
+        $rect.Inflate(-1, -1)
     
-            $radius = 20
-            $d = $radius * 2
+        $radius = 20
+        $d = $radius * 2
         
-            # Consistent safety check
-            if ($rect.Width -gt $d -and $rect.Height -gt $d) {
-                $path = New-Object System.Drawing.Drawing2D.GraphicsPath
-                $path.AddArc($rect.X, $rect.Y, $d, $d, 180, 90)
-                $path.AddArc($rect.Right - $d, $rect.Y, $d, $d, 270, 90)
-                $path.AddArc($rect.Right - $d, $rect.Bottom - $d, $d, $d, 0, 90)
-                $path.AddArc($rect.X, $rect.Bottom - $d, $d, $d, 90, 90)
-                $path.CloseFigure()
+        # Consistent safety check
+        if ($rect.Width -gt $d -and $rect.Height -gt $d) {
+            $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+            $path.AddArc($rect.X, $rect.Y, $d, $d, 180, 90)
+            $path.AddArc($rect.Right - $d, $rect.Y, $d, $d, 270, 90)
+            $path.AddArc($rect.Right - $d, $rect.Bottom - $d, $d, $d, 0, 90)
+            $path.AddArc($rect.X, $rect.Bottom - $d, $d, $d, 90, 90)
+            $path.CloseFigure()
         
-                $g.DrawPath($pen, $path)
-            }
-        })
+            $g.DrawPath($pen, $path)
+        }
+    })
 
     # --- Standard Header & Content Panel ---
 
