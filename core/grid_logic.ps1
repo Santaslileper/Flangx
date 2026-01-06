@@ -1,4 +1,7 @@
-﻿Add-Type -AssemblyName System.Windows.Forms
+﻿# core/grid_logic.ps1
+
+Add-Type -AssemblyName System.Windows.Forms
+
 function global:Get-GridMetrics {
     param([System.Collections.Generic.List[System.Drawing.Rectangle]]$IconRects)
     $metrics = @{
@@ -48,6 +51,7 @@ function global:Get-GridMetrics {
     while ($metrics.OffsetY -ge $metrics.StepY) { $metrics.OffsetY -= $metrics.StepY }
     return $metrics
 }
+
 function global:Test-IsOverlappingIcon {
     param(
         [int]$X,
@@ -66,6 +70,7 @@ function global:Test-IsOverlappingIcon {
     }
     return $false
 }
+
 function global:Get-SnapPosition {
     param(
         [int]$CurrentX,
@@ -83,53 +88,87 @@ function global:Get-SnapPosition {
     $row = [Math]::Round(($CurrentY - $offsetY) / $stepY)
     $targetX = $offsetX + ($col * $stepX)
     $targetY = $offsetY + ($row * $stepY)
+    
     $peers = Get-OtherWidgetRects -ExcludePid $PID
     $snapThreshold = 20
     $peerSnapX = $null
     $peerSnapY = $null
+    
     foreach ($peer in $peers) {
-        $pLeft   = if ($null -ne $peer.X) { $peer.X } else { $peer.Left }
-        $pTop    = if ($null -ne $peer.Y) { $peer.Y } else { $peer.Top }
-        $pWidth  = $peer.Width
-        $pHeight = $peer.Height
-        $pRight  = $pLeft + $pWidth
-        $pBottom = $pTop + $pHeight
-        if ([Math]::Abs($CurrentX - ($pRight + 10)) -lt $snapThreshold) { $peerSnapX = $pRight + 10 }
-        elseif ([Math]::Abs(($CurrentX + $WidgetWidth) - ($pLeft - 10)) -lt $snapThreshold) { $peerSnapX = ($pLeft - 10) - $WidgetWidth }
-        elseif ([Math]::Abs($CurrentX - $pLeft) -lt $snapThreshold) { $peerSnapX = $pLeft }
-        elseif ([Math]::Abs(($CurrentX + $WidgetWidth) - $pRight) -lt $snapThreshold) { $peerSnapX = $pRight - $WidgetWidth }
-        if ([Math]::Abs($CurrentY - ($pBottom + 10)) -lt $snapThreshold) { $peerSnapY = $pBottom + 10 }
-        elseif ([Math]::Abs(($CurrentY + $WidgetHeight) - ($pTop - 10)) -lt $snapThreshold) { $peerSnapY = ($pTop - 10) - $WidgetHeight }
-        elseif ([Math]::Abs($CurrentY - $pTop) -lt $snapThreshold) { $peerSnapY = $pTop }
-        elseif ([Math]::Abs(($CurrentY + $WidgetHeight) - $pBottom) -lt $snapThreshold) { $peerSnapY = $pBottom - $WidgetHeight }
+        # Normalize with explicit casting
+        $pX = if ($null -ne $peer.X) { [int]$peer.X } else { [int]$peer.Left }
+        $pY = if ($null -ne $peer.Y) { [int]$peer.Y } else { [int]$peer.Top }
+        $pW = [int]$peer.Width
+        $pH = [int]$peer.Height
+        $pRight  = $pX + $pW
+        $pBottom = $pY + $pH
+
+        # --- X Axis Snapping (Left/Right) ---
+        # 1. Snap Left-to-Right (Stacking): My Left touches Peer Right + Gap
+        if ([Math]::Abs($CurrentX - ($pRight + 10)) -lt $snapThreshold) { 
+            $peerSnapX = $pRight + 10 
+        }
+        # 2. Snap Right-to-Left (Stacking): My Right touches Peer Left - Gap
+        elseif ([Math]::Abs(($CurrentX + $WidgetWidth) - ($pX - 10)) -lt $snapThreshold) { 
+            $peerSnapX = ($pX - 10) - $WidgetWidth 
+        }
+        # 3. Snap Left-to-Left (Aligning): My Left aligns with Peer Left
+        elseif ([Math]::Abs($CurrentX - $pX) -lt $snapThreshold) { 
+            $peerSnapX = $pX 
+        }
+        # 4. Snap Right-to-Right (Aligning): My Right aligns with Peer Right
+        elseif ([Math]::Abs(($CurrentX + $WidgetWidth) - $pRight) -lt $snapThreshold) { 
+            $peerSnapX = $pRight - $WidgetWidth 
+        }
+
+        # --- Y Axis Snapping (Up/Down) ---
+        # 1. Snap Top-to-Bottom (Stacking): My Top touches Peer Bottom + Gap
+        if ([Math]::Abs($CurrentY - ($pBottom + 10)) -lt $snapThreshold) { 
+            $peerSnapY = $pBottom + 10 
+        }
+        # 2. Snap Bottom-to-Top (Stacking): My Bottom touches Peer Top - Gap
+        elseif ([Math]::Abs(($CurrentY + $WidgetHeight) - ($pY - 10)) -lt $snapThreshold) { 
+            $peerSnapY = ($pY - 10) - $WidgetHeight 
+        }
+        # 3. Snap Top-to-Top (Aligning): My Top aligns with Peer Top
+        elseif ([Math]::Abs($CurrentY - $pY) -lt $snapThreshold) { 
+            $peerSnapY = $pY 
+        }
+        # 4. Snap Bottom-to-Bottom (Aligning): My Bottom aligns with Peer Bottom
+        elseif ([Math]::Abs(($CurrentY + $WidgetHeight) - $pBottom) -lt $snapThreshold) { 
+            $peerSnapY = $pBottom - $WidgetHeight 
+        }
     }
+    
     $finalX = if ($null -ne $peerSnapX) { $peerSnapX } else { $targetX }
     $finalY = if ($null -ne $peerSnapY) { $peerSnapY } else { $targetY }
+    
     $overlapFound = $false
     foreach ($peer in $peers) {
-        $pLeft   = if ($null -ne $peer.X) { $peer.X } else { $peer.Left }
-        $pTop    = if ($null -ne $peer.Y) { $peer.Y } else { $peer.Top }
-        $pWidth  = $peer.Width
-        $pHeight = $peer.Height
-        if ($pLeft -lt ($finalX + $WidgetWidth) -and 
-            ($pLeft + $pWidth) -gt $finalX -and
-            $pTop -lt ($finalY + $WidgetHeight) -and 
-            ($pTop + $pHeight) -gt $finalY) {
+        $pX = if ($null -ne $peer.X) { [int]$peer.X } else { [int]$peer.Left }
+        $pY = if ($null -ne $peer.Y) { [int]$peer.Y } else { [int]$peer.Top }
+        $pW = [int]$peer.Width
+        $pH = [int]$peer.Height
+        if ($pX -lt ($finalX + $WidgetWidth) -and 
+            ($pX + $pW) -gt $finalX -and
+            $pY -lt ($finalY + $WidgetHeight) -and 
+            ($pY + $pH) -gt $finalY) {
             $overlapFound = $true
             break
         }
     }
+    
     if ($overlapFound) {
         $overlapGrid = $false
         foreach ($peer in $peers) {
-            $pLeft   = if ($null -ne $peer.X) { $peer.X } else { $peer.Left }
-            $pTop    = if ($null -ne $peer.Y) { $peer.Y } else { $peer.Top }
-            $pWidth  = $peer.Width
-            $pHeight = $peer.Height
-            if ($pLeft -lt ($targetX + $WidgetWidth) -and 
-                ($pLeft + $pWidth) -gt $targetX -and
-                $pTop -lt ($targetY + $WidgetHeight) -and 
-                ($pTop + $pHeight) -gt $targetY) {
+            $pX = if ($null -ne $peer.X) { [int]$peer.X } else { [int]$peer.Left }
+            $pY = if ($null -ne $peer.Y) { [int]$peer.Y } else { [int]$peer.Top }
+            $pW = [int]$peer.Width
+            $pH = [int]$peer.Height
+            if ($pX -lt ($targetX + $WidgetWidth) -and 
+                ($pX + $pW) -gt $targetX -and
+                $pY -lt ($targetY + $WidgetHeight) -and 
+                ($pY + $pH) -gt $targetY) {
                 $overlapGrid = $true
                 break
             }
@@ -142,6 +181,7 @@ function global:Get-SnapPosition {
             return @{ X = $CurrentX; Y = $CurrentY; Snapped = $false }
         }
     }
+    
     $finalOverlapIcon = Test-IsOverlappingIcon -X $finalX -Y $finalY -Width $WidgetWidth -Height $WidgetHeight -IconRects $icons
     if (-not $finalOverlapIcon) {
         return @{ X = [int]$finalX; Y = [int]$finalY; Snapped = $true }

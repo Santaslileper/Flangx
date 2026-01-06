@@ -1,4 +1,4 @@
-﻿param([int]$X = -1, [int]$Y = -1, [string]$InstanceId = $null)
+param([int]$X = -1, [int]$Y = -1, [string]$InstanceId = $null)
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $rootDir = Split-Path -Parent (Split-Path -Parent $scriptDir)
 $configFileName = "config.json"
@@ -19,17 +19,21 @@ $theme = @{
     Indicator  = [System.Drawing.Color]::FromArgb(80, 255, 255, 255)
 }
 $form = New-StandardWidget -Name "Timer" -Width 150 -Height 75 -ConfigPath $configPath -Theme $theme
-$indicator = New-WidgetHeader -Form $form -Theme $theme
-$form.Controls.Add($indicator)
-$panel = New-Object System.Windows.Forms.Panel
-$panel.Dock = "Fill"
-$panel.BackColor = "Transparent"
+
+# Refactored: Use Factory Header and Panel from Tag
+$indicator = $form.Tag.Header
+$panel = $form.Tag.ContentPanel
 $panel.Padding = New-Object System.Windows.Forms.Padding(5)
-$form.Controls.Add($panel)
+
 $script:DurationSeconds = 300 
 $script:RemainingSeconds = 300
 $script:IsRunning = $false
 $script:TargetTime = $null
+
+$SYM_PLAY  = [char]0x25B6
+$SYM_PAUSE = [char]0x23F8
+$SYM_RESET = [char]0x21BA
+
 $timeLabel = New-Object System.Windows.Forms.Label
 $timeLabel.Text = "05:00"
 $timeLabel.ForeColor = $theme.Foreground
@@ -39,12 +43,14 @@ $timeLabel.Dock = "Top"
 $timeLabel.Height = 50
 $timeLabel.Cursor = [System.Windows.Forms.Cursors]::Hand
 $panel.Controls.Add($timeLabel)
+
 $ctrlPanel = New-Object System.Windows.Forms.Panel
 $ctrlPanel.Dock = "Bottom"
 $ctrlPanel.Height = 25
 $panel.Controls.Add($ctrlPanel)
+
 $btnStart = New-Object System.Windows.Forms.Label
-$btnStart.Text = "â–¶"
+$btnStart.Text = "$SYM_PLAY"
 $btnStart.ForeColor = $theme.Accent
 $btnStart.Font = New-Object System.Drawing.Font("Segoe UI Symbol", 14)
 $btnStart.TextAlign = "MiddleCenter"
@@ -52,8 +58,9 @@ $btnStart.Width = 75
 $btnStart.Dock = "Left"
 $btnStart.Cursor = [System.Windows.Forms.Cursors]::Hand
 $ctrlPanel.Controls.Add($btnStart)
+
 $btnReset = New-Object System.Windows.Forms.Label
-$btnReset.Text = "â†º"
+$btnReset.Text = "$SYM_RESET"
 $btnReset.ForeColor = $theme.Dim
 $btnReset.Font = New-Object System.Drawing.Font("Segoe UI Symbol", 14)
 $btnReset.TextAlign = "MiddleCenter"
@@ -61,10 +68,10 @@ $btnReset.Width = 75
 $btnReset.Dock = "Right"
 $btnReset.Cursor = [System.Windows.Forms.Cursors]::Hand
 $ctrlPanel.Controls.Add($btnReset)
+
 $timeLabel.Add_Paint({
         param($s, $e)
-        if (-not $script:IsRunning) {
-        }
+        if (-not $script:IsRunning) {}
     })
 function Format-Time($secs) {
     if ($secs -ge 3600) {
@@ -77,7 +84,6 @@ function Format-Time($secs) {
 function Update-TimerDisplay {
     $timeLabel.Text = Format-Time $script:RemainingSeconds
     if ($script:IsRunning -and $script:DurationSeconds -gt 0) {
-        $pct = $script:RemainingSeconds / $script:DurationSeconds
         if ($script:RemainingSeconds -lt 10) { $timeLabel.ForeColor = "Red" }
         else { $timeLabel.ForeColor = $theme.Foreground }
     }
@@ -93,7 +99,7 @@ $timer.Add_Tick({
                 $script:RemainingSeconds = 0
                 $script:IsRunning = $false
                 $timer.Stop()
-                $btnStart.Text = "â–¶"
+                $btnStart.Text = "$SYM_PLAY"
                 [System.Console]::Beep(440, 500)
                 [System.Console]::Beep(550, 500)
                 $form.BackColor = "Red"
@@ -148,21 +154,21 @@ $btnStart.Add_Click({
         if ($script:IsRunning) {
             $script:TargetTime = (Get-Date).AddSeconds($script:RemainingSeconds)
             $timer.Start()
-            $btnStart.Text = "â¸"
+            $btnStart.Text = "$SYM_PAUSE"
             $btnStart.ForeColor = $theme.Accent
             $timeLabel.ForeColor = $theme.Foreground
             $form.BackColor = $theme.Background
         }
         else {
             $timer.Stop()
-            $btnStart.Text = "â–¶"
+            $btnStart.Text = "$SYM_PLAY"
             $btnStart.ForeColor = "Green" 
         }
     }.GetNewClosure())
 $btnReset.Add_Click({
         $script:IsRunning = $false
         $timer.Stop()
-        $btnStart.Text = "â–¶"
+        $btnStart.Text = "$SYM_PLAY"
         $script:RemainingSeconds = $script:DurationSeconds
         Update-TimerDisplay
         $form.BackColor = $theme.Background
@@ -185,6 +191,8 @@ $timeLabel.Add_MouseWheel({
     }.GetNewClosure())
 $timeLabel.Add_MouseEnter({ $timeLabel.Focus() })
 Update-TimerDisplay
+
+# Refactored: Only use factory drag and properties
 Enable-WidgetDrag -Controls @($form, $panel, $timeLabel, $ctrlPanel, $indicator) -Form $form -IndicatorPanel $indicator
 Enable-WidgetResize -Form $form -IndicatorPanel $indicator
 $form.ContextMenuStrip = New-WidgetContextMenu -Form $form -IndicatorPanel $indicator

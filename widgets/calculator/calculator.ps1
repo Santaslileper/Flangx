@@ -38,10 +38,17 @@ $display.TextAlign = "MiddleRight"
 $display.Font = New-Object System.Drawing.Font("Consolas", 18, [System.Drawing.FontStyle]::Bold)
 $display.Padding = New-Object System.Windows.Forms.Padding(0, 0, 5, 0)
 $panel.Controls.Add($display)
+
+# Symbols
+$SYM_PLUS_MINUS = [char]0x00B1
+$SYM_DIVIDE     = [char]0x00F7
+$SYM_MULTIPLY   = [char]0x00D7
+$SYM_MINUS      = [char]0x2212
+
 $buttonDefs = @(
-    @("C", "Â±", "%", "Ã·"),
-    @("7", "8", "9", "Ã—"),
-    @("4", "5", "6", "âˆ’"),
+    @("C", "$SYM_PLUS_MINUS", "%", "$SYM_DIVIDE"),
+    @("7", "8", "9", "$SYM_MULTIPLY"),
+    @("4", "5", "6", "$SYM_MINUS"),
     @("1", "2", "3", "+"),
     @("0", "0", ".", "=")
 )
@@ -62,9 +69,9 @@ function Do-Calculate {
     $result = 0
     switch ($script:operation) {
         "+" { $result = $a + $b }
-        "âˆ’" { $result = $a - $b }
-        "Ã—" { $result = $a * $b }
-        "Ã·" { $result = if ($b -ne 0) { $a / $b } else { "Error" } }
+        "$SYM_MINUS" { $result = $a - $b }
+        "$SYM_MULTIPLY" { $result = $a * $b }
+        "$SYM_DIVIDE" { $result = if ($b -ne 0) { $a / $b } else { "Error" } }
     }
     if ($result -eq "Error") {
         $script:currentValue = "Error"
@@ -96,17 +103,17 @@ for ($row = 0; $row -lt $buttonDefs.Count; $row++) {
         $btn.Location = New-Object System.Drawing.Point(($padding + $col * ($btnWidth + $padding)), ($gridY + $row * ($btnHeight + $padding)))
         if ($label -match "^[0-9.]$") { $btn.BackColor = $theme.ButtonBg }
         elseif ($label -eq "=") { $btn.BackColor = $theme.ButtonEq }
-        elseif ($label -match "[Ã·Ã—âˆ’+]") { $btn.BackColor = $theme.ButtonOp }
+        elseif ($label -match "[$SYM_DIVIDE$SYM_MULTIPLY$SYM_MINUS+]") { $btn.BackColor = $theme.ButtonOp }
         else { $btn.BackColor = [System.Drawing.Color]::FromArgb(60, 60, 65) }
         $btn.Add_Click({
             param($sender)
             $txt = $sender.Text
             switch ($txt) {
                 "C" { $script:currentValue = ""; $script:previousValue = ""; $script:operation = ""; $script:newNumber = $true; Update-Display }
-                "Â±" { if ($script:currentValue -ne "" -and $script:currentValue -ne "0") { $script:currentValue = if ($script:currentValue.StartsWith("-")) { $script:currentValue.Substring(1) } else { "-"+$script:currentValue }; Update-Display } }
+                "$SYM_PLUS_MINUS" { if ($script:currentValue -ne "" -and $script:currentValue -ne "0") { $script:currentValue = if ($script:currentValue.StartsWith("-")) { $script:currentValue.Substring(1) } else { "-"+$script:currentValue }; Update-Display } }
                 "%" { if ($script:currentValue -ne "") { $script:currentValue = ([double]$script:currentValue / 100).ToString(); Update-Display } }
                 "=" { Do-Calculate }
-                { $_ -match "[Ã·Ã—âˆ’+]" } { if ($script:currentValue -ne "") { if ($script:previousValue -ne "") { Do-Calculate }; $script:previousValue = $script:currentValue; $script:operation = $txt; $script:newNumber = $true } }
+                { $_ -match "[$SYM_DIVIDE$SYM_MULTIPLY$SYM_MINUS+]" } { if ($script:currentValue -ne "") { if ($script:previousValue -ne "") { Do-Calculate }; $script:previousValue = $script:currentValue; $script:operation = $txt; $script:newNumber = $true } }
                 "." { if ($script:newNumber) { $script:currentValue = "0."; $script:newNumber = $false } elseif (-not $script:currentValue.Contains(".")) { $script:currentValue += "." }; Update-Display }
                 default { if ($script:newNumber) { $script:currentValue = $txt; $script:newNumber = $false } else { $script:currentValue += $txt }; Update-Display }
             }

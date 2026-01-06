@@ -5,6 +5,6 @@
     "Height":  75,
     "X":  0,
     "TopMost":  false,
-    "Locked":  false,
-    "Active":  false
+    "Locked":  true,
+    "Active":  true
 }

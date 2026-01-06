@@ -1,4 +1,4 @@
-﻿param([int]$X = -1, [int]$Y = -1, [string]$InstanceId = $null)
+param([int]$X = -1, [int]$Y = -1, [string]$InstanceId = $null)
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $rootDir = Split-Path -Parent (Split-Path -Parent $scriptDir)
 $configFileName = "config.json"
@@ -16,13 +16,13 @@ $theme = @{
     Indicator  = [System.Drawing.Color]::FromArgb(80, 255, 255, 255)
 }
 $form = New-StandardWidget -Name "Net Speed" -Width 240 -Height 160 -ConfigPath $configPath -Theme $theme
-$indicator = New-WidgetHeader -Form $form -Theme $theme
-$form.Controls.Add($indicator)
-$panel = New-Object System.Windows.Forms.Panel
-$panel.Dock = "Fill"
+$indicator = $form.Tag.Header
+# $form.Controls.Add($indicator)
+$panel = $form.Tag.ContentPanel
+# $panel.Dock = "Fill"
 $panel.BackColor = "Transparent"
 $panel.Padding = New-Object System.Windows.Forms.Padding(10)
-$form.Controls.Add($panel)
+# $form.Controls.Add($panel)
 $lblDown = New-Object System.Windows.Forms.Label
 $lblDown.Text = "â¬‡ 0 KB/s"
 $lblDown.ForeColor = $theme.DownColor

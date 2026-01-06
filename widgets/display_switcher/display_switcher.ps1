@@ -1,4 +1,4 @@
-﻿param([int]$X = -1, [int]$Y = -1, [string]$InstanceId = $null)
+param([int]$X = -1, [int]$Y = -1, [string]$InstanceId = $null)
 if (-not $InstanceId) {
     $InstanceId = (Get-Date -Format "yyyyMMddHHmmssfff") + "_" + (Get-Random -Maximum 9999)
 }
@@ -28,7 +28,7 @@ if ($X -ne -1 -and $Y -ne -1) {
     $form.Location = New-Object System.Drawing.Point($X, $Y)
 }
 $form.Tag = $InstanceId
-$indicator = New-WidgetHeader -Form $form -Theme $theme
+$indicator = $form.Tag.Header
 $closeBtn = New-Object System.Windows.Forms.Label
 $closeBtn.Text = "Ã—"
 $closeBtn.Font = New-Object System.Drawing.Font("Segoe UI", 14, [System.Drawing.FontStyle]::Bold)
@@ -44,12 +44,12 @@ $closeBtn.Add_Click({
     $form.Close()
 })
 $indicator.Controls.Add($closeBtn)
-$form.Controls.Add($indicator)
-$panel = New-Object System.Windows.Forms.Panel
-$panel.Dock = "Fill"
+# $form.Controls.Add($indicator)
+$panel = $form.Tag.ContentPanel
+# $panel.Dock = "Fill"
 $panel.BackColor = "Transparent"
 $panel.Padding = New-Object System.Windows.Forms.Padding(15, 10, 15, 15)
-$form.Controls.Add($panel)
+# $form.Controls.Add($panel)
 function Get-DisplayState {
     $stateFile = Join-Path $scriptDir "display_state_$InstanceId.txt"
     if (-not (Test-Path $stateFile)) { return "extended" }

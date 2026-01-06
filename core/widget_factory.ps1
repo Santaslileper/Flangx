@@ -5,7 +5,7 @@
         [int]$Height = 80,
         [string]$ConfigPath,
         [hashtable]$Theme,
-        [bool]$ShowInTaskbar = $false,
+        [bool]$ShowInTaskbar = $global:AppConfig.ShowInTaskbar,
         [bool]$NoHeader = $false,
         [int]$HeaderHeight = 24
     )
@@ -30,6 +30,7 @@
         PinnedToDesktop = $false
         ContentPanel    = $null
         Header          = $null
+        StealthMode     = $true  # Default to Stealth Headers
     }
     if ($ConfigPath -and (Test-Path $ConfigPath)) {
         try {
@@ -60,30 +61,26 @@
     $updateRegion = {
         param($sender, $e) 
         if ($form.WindowState -eq 'Minimized') { return }
-        $radius = 20
-        $d = $radius * 2
-        $rect = $form.ClientRectangle
-        if ($rect.Width -le $d -or $rect.Height -le $d) { return }
-        $path = New-Object System.Drawing.Drawing2D.GraphicsPath
-        $path.AddArc($rect.X, $rect.Y, $d, $d, 180, 90)
-        $path.AddArc($rect.Right - $d, $rect.Y, $d, $d, 270, 90)
-        $path.AddArc($rect.Right - $d, $rect.Bottom - $d, $d, $d, 0, 90)
-        $path.AddArc($rect.X, $rect.Bottom - $d, $d, $d, 90, 90)
-        $path.CloseFigure()
+        # Square corners as requested
+        # $radius = 20 ... (Disabled)
+        $form.Region = $null 
         $form.Invalidate() 
     }.GetNewClosure()
     $form.Add_Load($updateRegion)
     $form.Add_Resize($updateRegion)
-    $form.Add_Paint({
-        param($s, $e)
-    })
+    
     $indicator = $null
     if (-not $NoHeader) {
         $indicator = New-WidgetHeader -Form $form -Theme $Theme -Height $HeaderHeight
         $form.Controls.Add($indicator)
         $indicator.BringToFront()
         $form.Tag.Header = $indicator
+        # Stealth Mode Default: Hidden
+        if ($form.Tag.StealthMode) {
+            $indicator.Visible = $false
+        }
     }
+    
     $contentPanel = New-Object System.Windows.Forms.Panel
     $contentPanel.Dock = "Fill"
     $contentPanel.BackColor = "Transparent"
@@ -103,6 +100,36 @@
             }
             catch {}
         })
+
+    # Stealth Mode Logic (Hover Detection)
+    if ($indicator -and $form.Tag.StealthMode) {
+        $stealthTimer = New-Object System.Windows.Forms.Timer
+        $stealthTimer.Interval = 200
+        $stealthTimer.Add_Tick({
+            if ($form.IsDisposed -or $indicator.IsDisposed) { 
+                $stealthTimer.Stop(); return 
+            }
+            $cursor = [System.Windows.Forms.Cursor]::Position
+            $bounds = $form.Bounds
+            # Add margin for easier grabbing
+            $bounds.Inflate(10, 10) 
+            if ($bounds.Contains($cursor)) {
+                if (-not $indicator.Visible) { $indicator.Visible = $true }
+            }
+            else {
+                # Keep visible if Menu is open or dragging
+                if ($form.ContextMenuStrip.Visible -or $form.Tag.IsDragging -or $form.Tag.IsResizing) {
+                    if (-not $indicator.Visible) { $indicator.Visible = $true }
+                }
+                elseif ($indicator.Visible) {
+                    $indicator.Visible = $false
+                }
+            }
+        }.GetNewClosure())
+        $stealthTimer.Start()
+        $form.Add_FormClosed({ $stealthTimer.Stop() })
+    }
+
     if ($indicator) {
         Enable-WidgetDrag -Controls @($form, $indicator, $contentPanel) -Form $form -IndicatorPanel $indicator
         Enable-WidgetResize -Form $form -IndicatorPanel $indicator
@@ -110,6 +137,7 @@
     }
     return $form
 }
+
 function global:New-WidgetHeader {
     param(
         [System.Windows.Forms.Form]$Form,
@@ -120,6 +148,7 @@ function global:New-WidgetHeader {
     $header.Dock = "Top"
     $header.Height = $Height
     $header.BackColor = if ($Theme.Indicator) { $Theme.Indicator } else { [System.Drawing.Color]::FromArgb(80, 255, 255, 255) }
+    
     $closeBtn = New-Object System.Windows.Forms.Label
     $closeBtn.Text = [char]::ConvertFromUtf32(0x00D7) 
     $closeBtn.Dock = "Left"
@@ -135,12 +164,14 @@ function global:New-WidgetHeader {
     $closeBtn.Add_MouseEnter({ $this.ForeColor = [System.Drawing.Color]::FromArgb(255, 100, 100) }.GetNewClosure())
     $closeBtn.Add_MouseLeave({ $this.ForeColor = $Theme.Foreground }.GetNewClosure())
     $header.Controls.Add($closeBtn)
+    
     $btnPanel = New-Object System.Windows.Forms.FlowLayoutPanel
     $btnPanel.Dock = "Right"
     $btnPanel.AutoSize = $true
     $btnPanel.FlowDirection = "RightToLeft"
     $btnPanel.BackColor = "Transparent"
     $header.Controls.Add($btnPanel)
+    
     $mkBtn = {
         param($txt, $tip)
         $b = New-Object System.Windows.Forms.Label
@@ -153,6 +184,7 @@ function global:New-WidgetHeader {
         $b.Cursor = [System.Windows.Forms.Cursors]::Hand
         return $b
     }
+    
     $LOCK_LOCKED = [char]::ConvertFromUtf32(0x1F512) 
     $LOCK_UNLOCKED = [char]::ConvertFromUtf32(0x1F513) 
     $lockBtn = &$mkBtn $LOCK_UNLOCKED "Toggle Lock"
@@ -163,6 +195,7 @@ function global:New-WidgetHeader {
             $closeBtn.Enabled = -not $Form.Tag.IsLocked
             global:Save-WidgetState -Form $Form
         }.GetNewClosure())
+    
     if ($Form.Tag.IsLocked) { 
         $lockBtn.Text = $LOCK_LOCKED 
         $closeBtn.Visible = $false

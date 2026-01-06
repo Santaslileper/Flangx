@@ -1,4 +1,4 @@
-﻿param([int]$X = -1, [int]$Y = -1, [string]$InstanceId = $null)
+param([int]$X = -1, [int]$Y = -1, [string]$InstanceId = $null)
 if (-not $InstanceId) {
     $InstanceId = (Get-Date -Format "yyyyMMddHHmmssfff") + "_" + (Get-Random -Maximum 9999)
 }
@@ -28,16 +28,16 @@ if ($X -ne -1 -and $Y -ne -1) {
     $form.Location = New-Object System.Drawing.Point($X, $Y)
 }
 $form.Tag = $InstanceId
-$indicator = New-WidgetHeader -Form $form -Theme $theme
-$form.Controls.Add($indicator)
+$indicator = $form.Tag.Header
+# $form.Controls.Add($indicator)
 $panel = New-Object System.Windows.Forms.FlowLayoutPanel
-$panel.Dock = "Fill"
+# $panel.Dock = "Fill"
 $panel.BackColor = "Transparent"
 $panel.AutoScroll = $true
 $panel.FlowDirection = "TopDown"
 $panel.WrapContents = $false
 $panel.Padding = New-Object System.Windows.Forms.Padding(10)
-$form.Controls.Add($panel)
+# $form.Controls.Add($panel)
 $script:Shortcuts = @()
 if (Test-Path $configPath) {
     try {

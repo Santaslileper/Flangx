@@ -1,6 +1,8 @@
 ﻿Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 $coreDir = $PSScriptRoot
+. "$coreDir\app_config.ps1"
+. "$coreDir\logging_utils.ps1" 
 . "$coreDir\window_utils.ps1"
 . "$coreDir\desktop_icons.ps1"
 . "$coreDir\grid_logic.ps1"

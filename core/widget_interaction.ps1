@@ -42,7 +42,7 @@ function global:Test-IsOverlapping {
         [int]$Width,
         [int]$Height,
         [System.Windows.Forms.Form]$ExcludeForm = $null,
-        [int]$Tolerance = 5
+        [int]$Tolerance = 0
     )
     try {
         $icons = Get-DesktopIconRects
