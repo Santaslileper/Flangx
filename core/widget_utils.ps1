@@ -1,7 +1,4 @@
-# core/widget_utils.ps1
-# General widget utilities
-
-function global:Ensure-SingleInstance {
+﻿function global:Ensure-SingleInstance {
     param([string]$ScriptPath)
     $currentPid = $PID
     $scriptName = [System.IO.Path]::GetFileName($ScriptPath)

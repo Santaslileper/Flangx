@@ -1,8 +1,4 @@
-# core/logging_utils.ps1
-# Centralized logging configuration
-
-$EnableLogging = $false
-
+﻿$EnableLogging = $false
 function Write-WidgetLog {
     param(
         [string]$Message,

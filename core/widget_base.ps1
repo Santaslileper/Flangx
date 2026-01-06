@@ -1,14 +1,6 @@
-# core/widget_base.ps1
-# Base widget functionality - Aggregator
-# This file now serves as a loader for the modular components.
-
-Add-Type -AssemblyName System.Windows.Forms
+﻿Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
-
-# Resolve path relative to this script
 $coreDir = $PSScriptRoot
-
-# Load Modules
 . "$coreDir\window_utils.ps1"
 . "$coreDir\desktop_icons.ps1"
 . "$coreDir\grid_logic.ps1"
