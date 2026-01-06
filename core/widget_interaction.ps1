@@ -48,6 +48,7 @@ function global:Test-IsOverlapping {
         $icons = Get-DesktopIconRects
         if ($icons -and $icons.Count -gt 0) {
             foreach ($icon in $icons) {
+                # Strict check (User requested "act like icons")
                 $overlapX = ($X -lt ($icon.Right + $Tolerance)) -and (($X + $Width) -gt ($icon.Left - $Tolerance))
                 $overlapY = ($Y -lt ($icon.Bottom + $Tolerance)) -and (($Y + $Height) -gt ($icon.Top - $Tolerance))
                 if ($overlapX -and $overlapY) {
@@ -56,9 +57,7 @@ function global:Test-IsOverlapping {
             }
         }
     }
-    catch {
-        Write-Host "Icon detection failed: $_"
-    }
+    catch { }
     try {
         $widgets = global:Get-AllWidgetRects
         foreach ($widget in $widgets) {
@@ -70,9 +69,7 @@ function global:Test-IsOverlapping {
             }
         }
     }
-    catch {
-        Write-Host "Widget collision detection failed: $_"
-    }
+    catch { }
     return $false
 }
 function global:Enable-WidgetDrag {
@@ -104,24 +101,29 @@ function global:Enable-WidgetDrag {
             if (-not $Form.Tag.IsDragging) { return }
             $newX = $Form.Left + ($e.X - $Form.Tag.DragStartX)
             $newY = $Form.Top + ($e.Y - $Form.Tag.DragStartY)
+            # Virtual Screen Bounds
             $virtualBounds = [System.Windows.Forms.SystemInformation]::VirtualScreen
             if ($newX -gt $virtualBounds.Right - 50) { $newX = $virtualBounds.Right - 50 }
             if ($newX -lt $virtualBounds.Left) { $newX = $virtualBounds.Left }
             if ($newY -gt $virtualBounds.Bottom - 50) { $newY = $virtualBounds.Bottom - 50 }
             if ($newY -lt $virtualBounds.Top) { $newY = $virtualBounds.Top }
-            $willCollide = global:Test-IsOverlapping -X $newX -Y $newY -Width $Form.Width -Height $Form.Height -ExcludeForm $Form
+            
             if ($Form.Tag.SnapToGrid) {
+                $willCollide = global:Test-IsOverlapping -X $newX -Y $newY -Width $Form.Width -Height $Form.Height -ExcludeForm $Form -Tolerance 0
                 try {
                     $snap = Get-SnapPosition -CurrentX $newX -CurrentY $newY -WidgetWidth $Form.Width -WidgetHeight $Form.Height
                     $pX = if ($snap.Snapped) { $snap.X } else { $newX }
                     $pY = if ($snap.Snapped) { $snap.Y } else { $newY }
-                    $snapWillCollide = global:Test-IsOverlapping -X $pX -Y $pY -Width $Form.Width -Height $Form.Height -ExcludeForm $Form
+                    $snapWillCollide = global:Test-IsOverlapping -X $pX -Y $pY -Width $Form.Width -Height $Form.Height -ExcludeForm $Form -Tolerance 0
                     $isValid = -not $snapWillCollide
+                    
                     global:Update-GridPreview -X $pX -Y $pY -Width $Form.Width -Height $Form.Height -IsSnapped $snap.Snapped -IsValid $isValid
+                    
                     if ($snap.Snapped -and -not $snapWillCollide) {
                         $Form.Location = New-Object System.Drawing.Point($snap.X, $snap.Y)
                     }
                     elseif (-not $willCollide) {
+                        # Fluid drag if not snapping to valid target
                         $Form.Location = New-Object System.Drawing.Point($newX, $newY)
                     }
                 }
@@ -132,11 +134,11 @@ function global:Enable-WidgetDrag {
                 }
             }
             else {
-                if (-not $willCollide) {
-                    $Form.Location = New-Object System.Drawing.Point($newX, $newY)
-                }
-                else {
-                     global:Update-GridPreview -X $newX -Y $newY -Width $Form.Width -Height $Form.Height -IsSnapped $false -IsValid $false
+                # FREE MODE: 100% Control - Always Move
+                $Form.Location = New-Object System.Drawing.Point($newX, $newY)
+                if ($global:GridPreview) { 
+                    $global:GridPreview.Close()
+                    $global:GridPreview = $null 
                 }
             }
         }.GetNewClosure())
@@ -151,21 +153,12 @@ function global:Enable-WidgetDrag {
             }
             $finalX = $Form.Location.X
             $finalY = $Form.Location.Y
+            
+            # Only enforce overlap Revert if SnapToGrid is enabled
             if ($Form.Tag.SnapToGrid) {
-                try {
-                    $snap = Get-SnapPosition -CurrentX $Form.Left -CurrentY $Form.Top -WidgetWidth $Form.Width -WidgetHeight $Form.Height
-                    if ($snap.Snapped) {
-                        $finalX = $snap.X
-                        $finalY = $snap.Y
-                    }
-                }
-                catch {
-                    Write-Host "Snap position failed: $_"
-                }
-            }
-            try {
-                $overlaps = global:Test-IsOverlapping -X $finalX -Y $finalY -Width $Form.Width -Height $Form.Height -ExcludeForm $Form
+                $overlaps = global:Test-IsOverlapping -X $finalX -Y $finalY -Width $Form.Width -Height $Form.Height -ExcludeForm $Form -Tolerance 0
                 if ($overlaps) {
+                    # Collision -> Revert
                     $finalX = $Form.Tag.OriginalX
                     $finalY = $Form.Tag.OriginalY
                     if ($IndicatorPanel) { 
@@ -180,15 +173,7 @@ function global:Enable-WidgetDrag {
                     }
                 }
             }
-            catch {
-                Write-Host "Final collision check failed: $_"
-                $finalX = $Form.Tag.OriginalX
-                $finalY = $Form.Tag.OriginalY
-                if ($IndicatorPanel) { 
-                    $IndicatorPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 150, 0)
-                    global:Start-ColorResetTimer -Panel $IndicatorPanel -FormTag $Form.Tag
-                }
-            }
+            
             $Form.Location = New-Object System.Drawing.Point($finalX, $finalY)
             global:Save-WidgetState -Form $Form
         }.GetNewClosure())
@@ -198,11 +183,7 @@ function global:Enable-WidgetDrag {
             param($s, $e)
             if ($e.Button -ne [System.Windows.Forms.MouseButtons]::Left) { return }
             $Form.Tag.IsLocked = -not $Form.Tag.IsLocked
-            $color = if ($Form.Tag.IsLocked) { 
-                [System.Drawing.Color]::FromArgb(150, 150, 150) 
-            } else { 
-                [System.Drawing.Color]::FromArgb(80, 255, 255, 255) 
-            }
+            $color = if ($Form.Tag.IsLocked) { [System.Drawing.Color]::FromArgb(150, 150, 150) } else { [System.Drawing.Color]::FromArgb(80, 255, 255, 255) }
             $IndicatorPanel.BackColor = $color
             global:Save-WidgetState -Form $Form
         }.GetNewClosure())
@@ -235,6 +216,16 @@ function global:Enable-WidgetResize {
         $Form.Tag.OriginalWidth = $Form.Width
         $Form.Tag.OriginalHeight = $Form.Height
         $Form.Opacity = 0.8
+        
+        # Cache Grid Metrics for Stepped Scaling
+        if ($Form.Tag.SnapToGrid) {
+            try {
+                $icons = Get-DesktopIconRects
+                $metrics = Get-GridMetrics -IconRects $icons
+                $Form.Tag.ResizeMetrics = $metrics
+            } catch { $Form.Tag.ResizeMetrics = $null }
+        }
+        
         if ($IndicatorPanel) { 
             $IndicatorPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 200, 80) 
         }
@@ -242,23 +233,39 @@ function global:Enable-WidgetResize {
     $grip.Add_MouseMove({
         param($s, $e)
         if (-not $Form.Tag.IsResizing) { return }
-        $currentWidth = $Form.Width
-        $currentHeight = $Form.Height
-        $dx = $e.X - $Form.Tag.ResizeStartX
-        $dy = $e.Y - $Form.Tag.ResizeStartY
-        $newWidth = [Math]::Max(100, $currentWidth + $dx)
-        $newHeight = [Math]::Max(75, $currentHeight + $dy)
-        $willCollide = global:Test-IsOverlapping -X $Form.Location.X -Y $Form.Location.Y -Width $newWidth -Height $newHeight -ExcludeForm $Form
-        if (-not $willCollide) {
-            $Form.Size = New-Object System.Drawing.Size($newWidth, $newHeight)
-            if ($Form.Tag.SnapToGrid) {
-                global:Update-GridPreview -X $Form.Location.X -Y $Form.Location.Y -Width $newWidth -Height $newHeight -IsSnapped $false -IsValid $true
-            }
+        
+        $targetW = $Form.Tag.OriginalWidth + ($e.X - $Form.Tag.ResizeStartX)
+        $targetH = $Form.Tag.OriginalHeight + ($e.Y - $Form.Tag.ResizeStartY)
+        
+        $finalW = $targetW
+        $finalH = $targetH
+        
+        # STEPPED RESIZE LOGIC (Only if SnapToGrid)
+        if ($Form.Tag.SnapToGrid -and $Form.Tag.ResizeMetrics) {
+            $m = $Form.Tag.ResizeMetrics
+            $baseW = if ($m.AvgWidth -gt 10) { $m.AvgWidth } else { 75 }
+            $baseH = if ($m.AvgHeight -gt 10) { $m.AvgHeight } else { 75 }
+            $stepX = if ($m.StepX -gt 10) { $m.StepX } else { 100 }
+            $stepY = if ($m.StepY -gt 10) { $m.StepY } else { 100 }
+            
+            # Col/Row Calculation
+            $cols = [Math]::Max(1, [Math]::Round(($targetW - $baseW) / $stepX))
+            $rows = [Math]::Max(1, [Math]::Round(($targetH - $baseH) / $stepY))
+            
+            # Snap to increments
+            $finalW = $baseW + ($cols * $stepX)
+            $finalH = $baseH + ($rows * $stepY)
         }
-        else {
-            if ($Form.Tag.SnapToGrid) {
-                global:Update-GridPreview -X $Form.Location.X -Y $Form.Location.Y -Width $newWidth -Height $newHeight -IsSnapped $false -IsValid $false
-            }
+        
+        $finalW = [Math]::Max(50, $finalW)
+        $finalH = [Math]::Max(50, $finalH)
+        
+        $Form.Size = New-Object System.Drawing.Size($finalW, $finalH)
+        
+        if ($Form.Tag.SnapToGrid) {
+            $willCollide = global:Test-IsOverlapping -X $Form.Location.X -Y $Form.Location.Y -Width $finalW -Height $finalH -ExcludeForm $Form -Tolerance 0
+             # Preview matches current form size
+             global:Update-GridPreview -X $Form.Location.X -Y $Form.Location.Y -Width $finalW -Height $finalH -IsSnapped $true -IsValid (-not $willCollide)
         }
     }.GetNewClosure())
     $grip.Add_MouseUp({
@@ -270,62 +277,37 @@ function global:Enable-WidgetResize {
             $global:GridPreview.Close()
             $global:GridPreview = $null 
         }
-        $willCollide = global:Test-IsOverlapping -X $Form.Location.X -Y $Form.Location.Y -Width $Form.Width -Height $Form.Height -ExcludeForm $Form
-        if ($willCollide) {
-            $Form.Size = New-Object System.Drawing.Size($Form.Tag.OriginalWidth, $Form.Tag.OriginalHeight)
-            if ($IndicatorPanel) { 
-                $IndicatorPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 100, 100)
-                global:Start-ColorResetTimer -Panel $IndicatorPanel -FormTag $Form.Tag
-            }
-        }
-        else {
-            if ($Form.Tag.SnapToGrid) {
-                try {
-                    $icons = Get-DesktopIconRects
-                    $metrics = Get-GridMetrics -IconRects $icons
-                    $avgW = if ($metrics.AvgWidth -gt 10) { $metrics.AvgWidth } else { 75 }
-                    $avgH = if ($metrics.AvgHeight -gt 10) { $metrics.AvgHeight } else { 75 }
-                    $stepX = if ($metrics.StepX -gt 10) { $metrics.StepX } else { 100 }
-                    $stepY = if ($metrics.StepY -gt 10) { $metrics.StepY } else { 100 }
-                    $rawCols = (($Form.Width - $avgW) / $stepX) + 1
-                    $cols = [Math]::Max(1, [Math]::Round($rawCols))
-                    $rawRows = (($Form.Height - $avgH) / $stepY) + 1
-                    $rows = [Math]::Max(1, [Math]::Round($rawRows))
-                    $snapW = $avgW + (($cols - 1) * $stepX)
-                    $snapH = $avgH + (($rows - 1) * $stepY)
-                    $snapCollision = global:Test-IsOverlapping -X $Form.Location.X -Y $Form.Location.Y -Width $snapW -Height $snapH -ExcludeForm $Form
-                    if (-not $snapCollision) {
-                        $Form.Size = New-Object System.Drawing.Size([int]$snapW, [int]$snapH)
-                    }
-                }
-                catch {
-                    Write-Host "Size snap failed: $_"
+        
+        # Only enforce Revert if SnapToGrid
+        if ($Form.Tag.SnapToGrid) {
+            $willCollide = global:Test-IsOverlapping -X $Form.Location.X -Y $Form.Location.Y -Width $Form.Width -Height $Form.Height -ExcludeForm $Form -Tolerance 0
+            if ($willCollide) {
+                # Snap Back if Invalid
+                $Form.Size = New-Object System.Drawing.Size($Form.Tag.OriginalWidth, $Form.Tag.OriginalHeight)
+                if ($IndicatorPanel) { 
+                    $IndicatorPanel.BackColor = [System.Drawing.Color]::FromArgb(255, 100, 100)
+                    global:Start-ColorResetTimer -Panel $IndicatorPanel -FormTag $Form.Tag
                 }
             }
-            if ($IndicatorPanel) { 
-                $IndicatorPanel.BackColor = [System.Drawing.Color]::FromArgb(100, 255, 100)
-                global:Start-ColorResetTimer -Panel $IndicatorPanel -FormTag $Form.Tag
+            else {
+                if ($IndicatorPanel) { 
+                    $IndicatorPanel.BackColor = [System.Drawing.Color]::FromArgb(100, 255, 100)
+                    global:Start-ColorResetTimer -Panel $IndicatorPanel -FormTag $Form.Tag
+                }
             }
         }
         global:Save-WidgetState -Form $Form
     }.GetNewClosure())
 }
 function global:Update-GridPreview {
-    param(
-        $X, 
-        $Y, 
-        $Width, 
-        $Height, 
-        $IsSnapped,
-        $IsValid = $true
-    )
+    param($X, $Y, $Width, $Height, $IsSnapped, $IsValid = $true)
     if (-not $global:GridPreview -or $global:GridPreview.IsDisposed) {
         $global:GridPreview = New-Object System.Windows.Forms.Form
         $global:GridPreview.FormBorderStyle = "None"
         $global:GridPreview.Opacity = 0.4
         $global:GridPreview.TopMost = $true
         $global:GridPreview.ShowInTaskbar = $false
-        $global:GridPreview.StartPosition = "Manual"
+        $global:GridPreview.StartupPosition = "Manual"
         $global:GridPreview.Add_Paint({
             param($sender, $paintArgs)
             $pen = New-Object System.Drawing.Pen([System.Drawing.Color]::FromArgb(200, 100, 150, 255), 2)
@@ -335,15 +317,9 @@ function global:Update-GridPreview {
     }
     $global:GridPreview.Size = New-Object System.Drawing.Size($Width, $Height)
     $global:GridPreview.Location = New-Object System.Drawing.Point($X, $Y)
-    if (-not $IsValid) {
-        $color = [System.Drawing.Color]::FromArgb(255, 100, 100)  
-    }
-    elseif ($IsSnapped) {
-        $color = [System.Drawing.Color]::FromArgb(100, 255, 100)  
-    }
-    else {
-        $color = [System.Drawing.Color]::FromArgb(255, 200, 100)  
-    }
+    if (-not $IsValid) { $color = [System.Drawing.Color]::FromArgb(255, 100, 100) }
+    elseif ($IsSnapped) { $color = [System.Drawing.Color]::FromArgb(100, 255, 100) }
+    else { $color = [System.Drawing.Color]::FromArgb(255, 200, 100) }
     $global:GridPreview.BackColor = $color
 }
 function global:Start-ColorResetTimer {
@@ -351,14 +327,9 @@ function global:Start-ColorResetTimer {
     $timer = New-Object System.Windows.Forms.Timer
     $timer.Interval = 1500
     $timer.Add_Tick({
-        if ($FormTag.IsLocked) { 
-            $Panel.BackColor = [System.Drawing.Color]::FromArgb(150, 150, 150) 
-        }
-        else { 
-            $Panel.BackColor = [System.Drawing.Color]::FromArgb(80, 255, 255, 255) 
-        }
-        $this.Stop()
-        $this.Dispose()
+        if ($FormTag.IsLocked) { $Panel.BackColor = [System.Drawing.Color]::FromArgb(150, 150, 150) }
+        else { $Panel.BackColor = [System.Drawing.Color]::FromArgb(80, 255, 255, 255) }
+        $this.Stop(); $this.Dispose()
     }.GetNewClosure())
     $timer.Start()
 }

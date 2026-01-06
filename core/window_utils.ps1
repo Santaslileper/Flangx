@@ -34,26 +34,34 @@ namespace DesktopWidgets {
         public const int GWL_EXSTYLE = -20;
         public const int WS_EX_TOOLWINDOW = 0x80;
         public const int WS_EX_APPWINDOW = 0x40000;
+
+        [DllImport("user32.dll", SetLastError=true)]
+        private static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+        private const uint SWP_NOMOVE = 0x0002;
+        private const uint SWP_NOSIZE = 0x0001;
+        private const uint SWP_NOZORDER = 0x0004;
+        private const uint SWP_FRAMECHANGED = 0x0020;
+
         public static void HideFromAltTab(IntPtr hWnd) {
             long style = GetWindowLongPtr(hWnd, GWL_EXSTYLE).ToInt64();
             style &= ~WS_EX_APPWINDOW; 
             style |= WS_EX_TOOLWINDOW;
             SetWindowLongPtr(hWnd, GWL_EXSTYLE, new IntPtr(style));
+            // Force update frame
+            SetWindowPos(hWnd, IntPtr.Zero, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED);
         }
     }
     public class DesktopIcons {
-        // Constants
         const int LVM_FIRST = 0x1000;
         const int LVM_GETITEMCOUNT = LVM_FIRST + 4;
         const int LVM_GETITEMRECT = LVM_FIRST + 14;
-        const int LVIR_ICON = 1; // Text and Icon
+        const int LVIR_ICON = 1; 
         const int MEM_COMMIT = 0x1000;
         const int MEM_RELEASE = 0x8000;
         const int PAGE_READWRITE = 0x04;
         const int PROCESS_VM_OPERATION = 0x0008;
         const int PROCESS_VM_READ = 0x0010;
         const int PROCESS_VM_WRITE = 0x0020;
-        // P/Invoke
         [DllImport("user32.dll")]
         static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
         [DllImport("user32.dll")]
@@ -85,11 +93,9 @@ namespace DesktopWidgets {
             IntPtr hShellDefView = IntPtr.Zero;
             IntPtr hWorkerw = IntPtr.Zero;
             IntPtr hDesktop = IntPtr.Zero;
-            // Method 1: Progman
             IntPtr hProgman = FindWindow("Progman", "Program Manager");
             hShellDefView = FindWindowEx(hProgman, IntPtr.Zero, "SHELLDLL_DefView", null);
             if (hShellDefView == IntPtr.Zero) {
-                // Method 2: WorkerW iteration
                 do {
                     hWorkerw = FindWindowEx(IntPtr.Zero, hWorkerw, "WorkerW", null);
                     hShellDefView = FindWindowEx(hWorkerw, IntPtr.Zero, "SHELLDLL_DefView", null);
@@ -137,7 +143,6 @@ namespace DesktopWidgets {
             }
             return icons;
         }
-        // New Helper for Widget-to-Widget
         [DllImport("user32.dll")]
         public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
         public static Rectangle GetWindowRectSimple(IntPtr hWnd) {

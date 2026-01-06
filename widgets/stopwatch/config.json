@@ -1,10 +1,10 @@
 {
-    "Y":  0,
-    "Width":  674,
+    "Y":  5,
+    "Width":  224,
     "SnapToGrid":  true,
-    "Height":  444,
-    "X":  113,
+    "Height":  150,
+    "X":  2175,
     "TopMost":  true,
-    "Locked":  true,
+    "Locked":  false,
     "Active":  false
 }

@@ -1,9 +1,9 @@
 {
-    "Y":  105,
+    "Y":  670,
     "Width":  200,
-    "SnapToGrid":  true,
+    "SnapToGrid":  false,
     "Height":  180,
-    "X":  450,
+    "X":  395,
     "TopMost":  true,
     "Locked":  false,
     "Active":  false
