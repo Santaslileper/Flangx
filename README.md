@@ -5,10 +5,10 @@
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%2010%28x64%29-blue?style=flat-square&logo=windows)](https://github.com/Santaslileper/Flangx)
 [![Language](https://img.shields.io/badge/Language-Rust%20%2F%20C%23-orange?style=flat-square&logo=rust)](https://github.com/Santaslileper/Flangx)
-[![Framework](https://img.shields.io/badge/Runtime-.NET%204.0%2B-512BD4?style=flat-square&logo=.net)](https://github.com/Santaslileper/Flangx)
+[![Runtime](https://img.shields.io/badge/Runtime-.NET%204.0%2B-512BD4?style=flat-square&logo=.net)](https://github.com/Santaslileper/Flangx)
 [![License](https://img.shields.io/badge/License-Proprietary-red?style=flat-square)](md/LICENSE.md)
 
-[Download Flangx_Release.zip](Flangx_Release.zip) • [Report a Bug](https://github.com/Santaslileper/Flangx/issues) • [Source Code](src/) • [Modding SDK](mods/)
+[Download Release](Flangx_Release.zip) • [Report Bug](https://github.com/Santaslileper/Flangx/issues) • [Source](src/) • [Mod SDK](mods/) • [Safety](md/SECURITY.md)
 
 ---
 
@@ -66,18 +66,22 @@ cd Flangx
 
 ---
 
-### 🛡️ Safety & Privacy
+### 🛡️ Safety & Documentation
 > [!IMPORTANT]
 > **Data Isolation**: Flangx does not establish external network connections for core logic. All notes, layouts, and timer data are stored locally in the application directory.
 
-> [!NOTE]
-> **Resource Management**: The Rust core directly queries the shell interface to determine icon positions, bypassing high-level API abstraction for better system integration.
+| **Reference** | **Description** | **Requirement** |
+| :--- | :--- | :--- |
+| **[License](md/LICENSE.md)** | Proprietary Terms | Mandatory |
+| **[Safety](md/SECURITY.md)** | Security Protocols | Advisory |
+| **[Contribution](md/CONTRIBUTING.md)** | Development Guide | Optional |
+| **[Conduct](md/CODE_OF_CONDUCT.md)** | Community Standards | Mandatory |
+| **[Support](md/SUPPORT.md)** | Technical Help | Technical |
 
 ---
 
 ### ⚖️ License
 This repository is released under **Proprietary (Structured Freedom)**. All rights reserved. 
-See [md/LICENSE.md](md/LICENSE.md) for full terms and usage permissions.
 
 <div align="center">
   
