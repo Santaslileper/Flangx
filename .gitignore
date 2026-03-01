@@ -1,28 +1,40 @@
-# Build Artifacts
-*.exe
-*.dll
-*.pdb
-*.obj
-*.log
+# Flangx: Tracked Build Assets & Releases
 
-# Project Data
-data/
-*.json
-*.txt
+# Ignore everything by default
+*
+
+# Allow directories
+!*/
+
+# Allow standard documentation
+!*.md
+!md/
+!md/**
+
+# Allow icons, previews, and mods
+!assets/
+!assets/**
+!mods/
+!mods/**
+
+# Allow specific build requirements
+!src/
+!src/**
 !requirements.txt
-!README.md
-!LICENSE.md
-!COLLABORATION_GUIDE.md
-!SUPPORT.md
-!SECURITY.md
-!CONTRIBUTING.md
-!CODE_OF_CONDUCT.md
 
-# OS Files
-Thumbs.db
-Desktop.ini
-.DS_Store
+# Allow executables and releases
+!*.exe
+!*.zip
 
-# Git
+# EXPLICITLY IGNORE local test scripts and temporary logs
+.test_move.cs
+*.log
+src/interaction_rust/target/
+src/interaction_rust/*.pdb
+src/interaction_rust/*.obj
+.vscode/
+
+# Ensure specialized git folders are handled correctly
 .git/
 .github/
+! .github/**
