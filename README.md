@@ -1,60 +1,86 @@
+<div align="center">
+
 # 🏢 Flangx: Desktop Widgets
-![Flangx Preview](assets/preview.png)
-A lightweight, grid-snapping widget system for Windows that lives directly on your desktop. No installers, no heavy frameworks—just pure performance and structural utility.
+**"Direct Window-Grid Coupling for Windows"**
 
-## ⚡ Quick Start (PowerShell)
-You can compile and launch the application directly from your terminal:
+[![Platform](https://img.shields.io/badge/Platform-Windows%2010%28x64%29-blue?style=flat-square&logo=windows)](https://github.com/Santaslileper/Flangx)
+[![Language](https://img.shields.io/badge/Language-Rust%20%2F%20C%23-orange?style=flat-square&logo=rust)](https://github.com/Santaslileper/Flangx)
+[![Framework](https://img.shields.io/badge/Runtime-.NET%204.0%2B-512BD4?style=flat-square&logo=.net)](https://github.com/Santaslileper/Flangx)
+[![License](https://img.shields.io/badge/License-Proprietary-red?style=flat-square)](md/LICENSE.md)
+
+[Download Flangx_Release.zip](Flangx_Release.zip) • [Report a Bug](https://github.com/Santaslileper/Flangx/issues) • [Source Code](src/) • [Modding SDK](mods/)
+
+---
+
+<img src="assets/preview.png" width="850" alt="Flangx Desktop Layout">
+
+Drawing on mechanical engineering concepts, **Flangx** treats your desktop as a physical grid. Every widget is locked to the Windows icon system using a structural "flange" logic, providing consistent alignment and predictable window behavior.
+
+---
+
+</div>
+
+### 🛠️ Technical Specifications
+| **Component** | **Implementation Details** | **System Impact** |
+| :--- | :--- | :--- |
+| **Logic Layer** | Rust 1.70+ (`interaction.dll`) | Shared memory process access |
+| **User Interface** | GDI+ Windows Forms (`Flangx.exe`) | Managed execution / Direct2D |
+| **Memory Access** | Win32 `ReadProcessMemory` | No telemetry / Local only |
+| **Compilation** | JIT via `csc.exe` (v4.0.30319) | Native binary execution |
+| **State Storage** | Local JSON Persistence | 100% Offline |
+
+---
+
+### ✨ Core Features
+*   📍 **Grid Alignment**: Snaps widgets to the existing Windows desktop icon grid (typically 100x100 or 75x75).
+*   📦 **Collision Handling**: Dragging widgets into occupied grid spaces repositions existing elements.
+*   🛠️ **Native Tools**:
+    *   🕒 **Clock**: Direct system time synchronization.
+    *   ⏲️ **Timer**: Local countdown execution.
+    *   🌐 **HTML Renderer**: Standard browser frame for local/web reference.
+    *   🧮 **Calculator**: Basic arithmetic processing.
+*   🔌 **Modding Interface**: Automatically compiles `.cs` scripts found in the `mods/` directory at runtime.
+*   💾 **Haptic Configuration**: Remembers position, size, and opacity settings via local config.
+
+---
+
+### 🔬 Technical Design Patterns
+| **Pattern** | **Method** | **Result** |
+| :--- | :--- | :--- |
+| **Grid Mapping** | Win32 `FindWindowEx` / `ListView` hooks | Icon-relative positioning |
+| **Dynamic Loading** | `System.Reflection` / C# Mod logic | Runtime tool expansion |
+| **Efficiency** | Split-engine (Rust + C#) | Minimal background overhead |
+
+---
+
+### ⚡ Build & Deployment
+Build the binary directly using your local Windows environment (No IDE required):
 
 ```powershell
-# 1. Download the repository (axsnlg-f-release branch)
-git clone -b axsnlg-f-release https://github.com/Santaslileper/Flangx.git
-
-# 2. Compile and Launch
+# 1. Access the Flangx directory
 cd Flangx
-& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:winexe /out:Flangx.exe core/*.cs /reference:System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll,System.Data.dll,System.Xml.dll /win32icon:assets/app.ico /platform:x64; Start-Process .\Flangx.exe
+
+# 2. Compile using the native .NET Framework compiler
+& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:winexe /out:Flangx.exe src/*.cs /reference:System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll,System.Data.dll,System.Xml.dll /win32icon:assets/clock_icon.ico /platform:x64; Start-Process .\Flangx.exe
 ```
 
-## ✨ Key Features
-- **Grid Snapping**: Widgets automatically align to your desktop icons for a pixel-perfect layout.
-- **Item Bumping**: Dragging a widget into a occupied space "bumps" existing widgets or icons out of the way, similar to iOS.
-- **Specialized Types**:
-  - 📝 **Notes**: Quick text containers that save instantly.
-  - 🕒 **Clock**: High-contrast digital time.
-  - ⏲️ **Timer**: Productive countdown with input.
-  - 🧮 **Calculator**: Simple math directly on your desktop.
-  - 🌐 **Mini Browser**: Keep a reference page or search bar open.
-  - 🔋 **Battery**: Real-time monitoring of your system percentage.
-  - 🌦️ **Weather**: A minimalist, text-based dashboard.
-- **Searchable Selector**: Click [+] to search all available types, including native and mods.
-- **Drag-to-Spawn**: Drag widget names directly from the selector onto your desktop.
-- **Modding System**: Drop C# scripts (`.cs`) into the `mods/` directory. They compile and load at runtime automatically.
-- **Recently Closed**: Re-open previous widgets from the selector's "Recently Closed" tab.
-- **Persistence**: Remembers position, size, and custom opacity (use mouse wheel on header) automatically.
-- **Always on Top**: Toggle widgets to float above other windows or stick them to the desktop.
+---
 
-## ⚙️ How It Works
-The engine uses a split architecture for maximum efficiency:
-1. **Rust Core (`interaction.dll`)**: Handles high-performance desktop icon detection and grid math.
-2. **C# UI (`Flangx.exe`)**: Manages the windowing system, specialized widget logic, and GDI+ rendering.
+### 🛡️ Safety & Privacy
+> [!IMPORTANT]
+> **Data Isolation**: Flangx does not establish external network connections for core logic. All notes, layouts, and timer data are stored locally in the application directory.
 
-## 🛠 Compilation & Development
-The project is designed to be built using the C# compiler already included in every Windows installation.
+> [!NOTE]
+> **Resource Management**: The Rust core directly queries the shell interface to determine icon positions, bypassing high-level API abstraction for better system integration.
 
-```powershell
-# Compile the entire project
-& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /out:Flangx.exe core/*.cs /reference:System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll,System.Data.dll,System.Xml.dll /win32icon:assets/app.ico /platform:x64
-```
+---
 
-## ⚖️ License & Privacy
-- **Privacy**: 100% Offline. Your notes and settings never leave your machine.
-- **License**: **Proprietary (Structured Freedom)**. All rights reserved. See [LICENSE.md](LICENSE.md) for full details on study usage and bug reporting permissions.
+### ⚖️ License
+This repository is released under **Proprietary (Structured Freedom)**. All rights reserved. 
+See [md/LICENSE.md](md/LICENSE.md) for full terms and usage permissions.
 
-## 🏷️ Why Flangx?
+<div align="center">
+  
+[Santaslileper](https://github.com/Santaslileper)
 
-### 🛠️ The Technical "Flange"
-In engineering, a flange is a projecting rim used for strengthening or attachment. **Flangx** applies this concept to your desktop: every widget is built with an invisible structural "rim" that couples it to the underlying Windows icon grid. This ensures that your layout isn't just a collection of floating boxes, but a rigid, synchronized system with mechanical-grade alignment.
-
-### ⚖️ The Philosophy: "Structured Freedom"
-*Order is the foundation of flow.* We believe that a chaotic desktop is a chaotic mind. By accepting the structure of the grid, you are freed from the friction of window management. When every tool has a "flanged" home, you stop managing your workspace and start inhabiting your work.
-
-
+</div>
