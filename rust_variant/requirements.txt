@@ -1,0 +1,19 @@
+# Project Build Dependencies
+
+## Windows C# Compiler (csc.exe)
+- System.Windows.Forms
+- System.Drawing
+- System.Core
+- System.Data
+- System.Xml
+
+## Native Core (Rust)
+- interaction.dll (included in repo)
+- reqwest (if you re-compile Rust core)
+- serde/serde_json
+
+## Compilation Instructions
+Compile using the built-in .NET 4.0 compiler for maximum compatibility:
+```powershell
+& "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /target:winexe /out:Flangx.exe core/*.cs /reference:System.Windows.Forms.dll,System.Drawing.dll,System.Core.dll,System.Data.dll,System.Xml.dll /win32icon:assets/app.ico /platform:x64
+```

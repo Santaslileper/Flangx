@@ -1,0 +1,28 @@
+# Build Artifacts
+*.exe
+*.dll
+*.pdb
+*.obj
+*.log
+
+# Project Data
+data/
+*.json
+*.txt
+!requirements.txt
+!README.md
+!LICENSE.md
+!COLLABORATION_GUIDE.md
+!SUPPORT.md
+!SECURITY.md
+!CONTRIBUTING.md
+!CODE_OF_CONDUCT.md
+
+# OS Files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Git
+.git/
+.github/
